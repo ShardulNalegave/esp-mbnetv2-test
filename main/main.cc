@@ -7,11 +7,17 @@
 #include <tensorflow/lite/micro/micro_log.h>
 #include <tensorflow/lite/micro/micro_mutable_op_resolver.h>
 #include <tensorflow/lite/schema/schema_generated.h>
+#include <tensorflow/lite/micro/micro_profiler.h>
 
 #include "model.h"
 #include "image.h"
 
 static const char* TAG = "esp_mbnetv2_test_app";
+
+#include <stdlib.h>
+int8_t random_int8() {
+    return (int8_t)(rand() % 256 - 128); // Generates a number between -128 and 127
+}
 
 namespace {
     const tflite::Model* model = nullptr;
@@ -79,7 +85,8 @@ extern "C" void app_main(void)
     output = interpreter->output(0);
 
     for (int i = 0; i < image_raw_len; i++) {
-        input->data.int8[i] = quantize((uint8_t)image_raw[i] / 255.0);
+        // input->data.int8[i] = quantize((uint8_t)image_raw[i] / 255.0);
+        input->data.int8[i] = random_int8();
     }
 
     long long start_time = esp_timer_get_time();
@@ -91,4 +98,9 @@ extern "C" void app_main(void)
     long long total_time = esp_timer_get_time() - start_time;
     ESP_LOGI(TAG, "Invoke was successful");
     printf("Invoke: Total time = %lld\n", total_time / 1000);
+
+    for (int i = 0; i < 1000; i++) {
+        printf("%f, ", dequantize(output->data.int8[i]));
+    }
+    printf("\n");
 }

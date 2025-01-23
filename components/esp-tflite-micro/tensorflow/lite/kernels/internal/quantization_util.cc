@@ -279,7 +279,6 @@ int IntegerDoubleCompare(double a, double b) {
   }
 }
 
-#include "stdio.h"
 void PreprocessSoftmaxScaling(double beta, double input_scale,
                               int input_integer_bits,
                               int32_t* quantized_multiplier, int* left_shift) {
