@@ -62,6 +62,12 @@ void SoftmaxQuantized(TfLiteContext* context, const TfLiteEvalTensor* input,
           tflite::micro::GetTensorData<int16_t>(output));
     } else {
 #if ESP_NN
+      printf("\nSoftmax:-\n{ ");
+      for (int i = 0; i < 1000; i++) {
+        printf("%d, ", input->data.int8[i]);
+      }
+      printf("}\n");
+
       const int32_t input_beta_multiplier = data->op_data.input_multiplier;
       const int32_t input_beta_left_shift = data->op_data.input_left_shift;
       const int diff_min = data->op_data.diff_min;

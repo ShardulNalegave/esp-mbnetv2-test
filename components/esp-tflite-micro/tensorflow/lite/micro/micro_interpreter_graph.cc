@@ -13,6 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
 
+#include "tensorflow/lite/micro/kernels/kernel_util.h"
+
 #include "tensorflow/lite/micro/micro_interpreter_graph.h"
 
 #include "flatbuffers/flatbuffers.h"  // from @flatbuffers
@@ -217,6 +219,16 @@ TfLiteStatus MicroInterpreterGraph::InvokeSubgraph(int subgraph_idx) {
 
     TFLITE_DCHECK(registration->invoke);
     TfLiteStatus invoke_status = registration->invoke(context_, node);
+
+    if (current_operator_index_ == 11 || current_operator_index_ == 62) {
+      TfLiteEvalTensor* output = tflite::micro::GetEvalOutput(context_, node, 0);
+      printf("\nNode %ld output:- { ", current_operator_index_);
+      for (int i = 0; i < 100; i++) {
+        if (i % 14 == 0) printf("\n");
+        printf("%d, ", output->data.int8[i]);
+      }
+      printf("}\n\n");
+    }
 
     // All TfLiteTensor structs used in the kernel are allocated from temp
     // memory in the allocator. This creates a chain of allocations in the
