@@ -29,12 +29,3 @@ output = interpreter.get_tensor(output_details['index']).astype(np.float32)
 output = (output - output_zero) * output_scale
 predictions = decode_predictions(output, top=5)
 print(predictions)
-
-tensor_details = interpreter.get_tensor_details()
-tensor = None
-for t in tensor_details:
-    if t['name'] == 'mobilenetv2_0.35_224_1/global_average_pooling2d_1/Mean':
-        tensor = t
-
-print("\n\n")
-print(interpreter.get_tensor(tensor['index']).flatten()[:100])

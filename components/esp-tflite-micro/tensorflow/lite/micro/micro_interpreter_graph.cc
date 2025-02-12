@@ -219,17 +219,6 @@ TfLiteStatus MicroInterpreterGraph::InvokeSubgraph(int subgraph_idx) {
 
     TFLITE_DCHECK(registration->invoke);
     TfLiteStatus invoke_status = registration->invoke(context_, node);
-
-    if (current_operator_index_ == 11 || current_operator_index_ == 62) {
-      TfLiteEvalTensor* output = tflite::micro::GetEvalOutput(context_, node, 0);
-      printf("\nNode %ld output:- { ", current_operator_index_);
-      for (int i = 0; i < 100; i++) {
-        if (i % 14 == 0) printf("\n");
-        printf("%d, ", output->data.int8[i]);
-      }
-      printf("}\n\n");
-    }
-
     // All TfLiteTensor structs used in the kernel are allocated from temp
     // memory in the allocator. This creates a chain of allocations in the
     // temp section. The call below resets the chain of allocations to

@@ -83,12 +83,6 @@ extern "C" void app_main(void)
         input->data.int8[i] = quantize(((uint8_t)image_raw[i] / 127.5) - 1);
     }
 
-    printf("{ ");
-    for (int i = 0; i < 100; i++) {
-        printf("%d, ", input->data.int8[i]);
-    }
-    printf("}\n");
-
     long long start_time = esp_timer_get_time();
 
     if (interpreter->Invoke() != kTfLiteOk) {
@@ -99,8 +93,16 @@ extern "C" void app_main(void)
     ESP_LOGI(TAG, "Invoke was successful");
     printf("Invoke: Total time = %lld\n", total_time / 1000);
 
+    int maxLabel = 0;
+    float maxConf = 0.0;
+
     for (int i = 0; i < 1000; i++) {
-        printf("%f, ", dequantize(output->data.int8[i]));
+        float conf = dequantize(output->data.int8[i]);
+        if (conf > maxConf) {
+            maxLabel = i;
+            maxConf = conf;
+        }
     }
-    printf("\n");
+
+    printf("\nLabel: %d, Confidence: %f\n", maxLabel, maxConf);
 }
