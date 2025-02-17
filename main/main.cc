@@ -5,6 +5,7 @@
 
 #include <tensorflow/lite/micro/micro_interpreter.h>
 #include <tensorflow/lite/micro/micro_log.h>
+#include <tensorflow/lite/micro/micro_profiler.h>
 #include <tensorflow/lite/micro/micro_mutable_op_resolver.h>
 #include <tensorflow/lite/schema/schema_generated.h>
 #include <tensorflow/lite/micro/micro_profiler.h>
@@ -17,6 +18,7 @@ static const char* TAG = "esp_mbnetv2_test_app";
 namespace {
     const tflite::Model* model = nullptr;
     tflite::MicroInterpreter* interpreter = nullptr;
+    tflite::MicroProfiler profiler;
 
     constexpr int kTensorArenaSize = 1.5 * 1024 * 1024;
     static uint8_t* tensor_arena;
@@ -65,7 +67,7 @@ extern "C" void app_main(void)
     micro_op_resolver.AddSoftmax();
 
     static tflite::MicroInterpreter static_interpreter(
-        model, micro_op_resolver, tensor_arena, kTensorArenaSize
+        model, micro_op_resolver, tensor_arena, kTensorArenaSize, nullptr, &profiler
     );
     interpreter = &static_interpreter;
 
@@ -104,5 +106,6 @@ extern "C" void app_main(void)
         }
     }
 
+    profiler.Log();
     printf("\nLabel: %d, Confidence: %f\n", maxLabel, maxConf);
 }

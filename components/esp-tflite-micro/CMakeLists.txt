@@ -57,14 +57,14 @@ set(signal_srcs
           "${signal_dir}/src/kiss_fft_wrappers/kiss_fft_int32.cc")
 
 # remove sources which will be provided by esp_nn
-# list(REMOVE_ITEM srcs_kernels
-#           "${tfmicro_kernels_dir}/add.cc"
-#           "${tfmicro_kernels_dir}/conv.cc"
-#           "${tfmicro_kernels_dir}/depthwise_conv.cc"
-#           "${tfmicro_kernels_dir}/fully_connected.cc"
-#           "${tfmicro_kernels_dir}/mul.cc"
-#           "${tfmicro_kernels_dir}/pooling.cc"
-#           "${tfmicro_kernels_dir}/softmax.cc")
+list(REMOVE_ITEM srcs_kernels
+          "${tfmicro_kernels_dir}/add.cc"
+          "${tfmicro_kernels_dir}/conv.cc"
+          "${tfmicro_kernels_dir}/depthwise_conv.cc"
+          "${tfmicro_kernels_dir}/fully_connected.cc"
+          "${tfmicro_kernels_dir}/mul.cc"
+          "${tfmicro_kernels_dir}/pooling.cc"
+          "${tfmicro_kernels_dir}/softmax.cc")
 
 FILE(GLOB esp_nn_kernels
           "${tfmicro_kernels_dir}/esp_nn/*.cc")
@@ -73,7 +73,7 @@ set(lib_srcs
           "${srcs_micro}"
           "${srcs_kernels}"
           "${srcs_tflite_bridge}"
-          # "${esp_nn_kernels}"
+          "${esp_nn_kernels}"
           "${src_micro_frontend}"
           "${signal_srcs}"
           "${tflite_dir}/kernels/kernel_util.cc"
@@ -130,7 +130,7 @@ if("${IDF_VERSION_MAJOR}.${IDF_VERSION_MINOR}" VERSION_GREATER_EQUAL "5.0")
 endif()
 
 # enable ESP-NN optimizations by Espressif
-# target_compile_options(${COMPONENT_LIB} PRIVATE -DESP_NN)
+target_compile_options(${COMPONENT_LIB} PRIVATE -DESP_NN)
 
 set(common_flags -DTF_LITE_STATIC_MEMORY -DTF_LITE_DISABLE_X86_NEON -O3
                  -Wstrict-aliasing -Wno-unused-parameter -Wall -Wextra -Wvla

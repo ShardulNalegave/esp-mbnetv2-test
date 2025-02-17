@@ -165,7 +165,7 @@ TfLiteStatus FullyConnectedEval(TfLiteContext* context, TfLiteNode* node) {
                 tflite::micro::GetTensorShape(bias),
                 tflite::micro::GetOptionalTensorData<int32_t>(bias),
                 tflite::micro::GetTensorShape(output),
-                tflite::micro::GetTensorData<int8_t>(output))
+                tflite::micro::GetTensorData<int8_t>(output));
           } else {
 #if ESP_NN
             const RuntimeShape& filter_shape = tflite::micro::GetTensorShape(filter);
