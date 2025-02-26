@@ -31,24 +31,16 @@ namespace {
 int8_t quantize(float val) {
     auto zero_point = input->params.zero_point;
     auto scale = input->params.scale;
-    return (val / scale) + zero_point;
+    auto quant = (val / scale) + zero_point;
+    if (quant < -128) quant = -128;
+    if (quant > 127) quant = 127;
+    return quant;
 }
 
 float dequantize(int8_t val) {
     auto zero_point = output->params.zero_point;
     auto scale = output->params.scale;
     return (val - zero_point) * scale;
-}
-
-void crop_img(const uint16_t *input, int in_w, int in_h, uint16_t *output, int out_w, int out_h) {
-    int x_offset = (in_w - out_w) / 2;
-    int y_offset = (in_h - out_h) / 2;
-
-    for (int i = 0; i < out_h; i++) {
-        for (int j = 0; j < out_w; j++) {
-            output[i * out_w + j] = input[(i + y_offset) * in_w + (j + x_offset)];
-        }
-    }
 }
 
 extern "C" void app_main(void)
@@ -100,12 +92,6 @@ extern "C" void app_main(void)
     input = interpreter->input(0);
     output = interpreter->output(0);
 
-    uint16_t* cropped_img = (uint16_t*)heap_caps_malloc(224 * 224 * sizeof(uint16_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-    if (!cropped_img) {
-        printf("Failed to allocate memory for cropped image\n");
-        return;
-    }
-
     while (true) {
         camera_fb_t* fb = esp_camera_fb_get();
         if (!fb) {
@@ -113,34 +99,44 @@ extern "C" void app_main(void)
             return;
         }
 
-        crop_img((const uint16_t *)fb->buf, 320, 240, cropped_img, 224, 224);
-        lv_draw_sw_rgb565_swap(cropped_img, 224 * 224);
-        esp_camera_fb_return(fb);
+        // lv_draw_sw_rgb565_swap(cropped_img, 224 * 224);
 
-        for (int i = 0; i < 224 * 224; i++) {
-            uint16_t pixel = ((uint16_t *) (cropped_img))[i];
-            uint8_t hb = pixel & 0xFF;
-            uint8_t lb = pixel >> 8;
+        int x_offset = (320 - 224) / 2;
+        int y_offset = (240 - 224) / 2;
 
-            uint8_t r = (lb & 0x1F) << 3;
-            uint8_t g = ((hb & 0x07) << 5) | ((lb & 0xE0) >> 3);
-            uint8_t b = (hb & 0xF8);
+        for (int y = 0; y < 224; y++) {
+            for (int x = 0; x < 224; x++) {
+                int in_x = x + x_offset;
+                int in_y = y + y_offset;
+                uint16_t pixel = ((uint16_t*)fb)[in_y * 224 + in_x];
 
-            uint16_t inp_offset = i * 3;
-            input->data.int8[inp_offset] = quantize(r);
-            input->data.int8[inp_offset + 1] = quantize(g);
-            input->data.int8[inp_offset + 2] = quantize(b);
+                float r = ((pixel >> 11) & 0x1F) * (255.0f / 31.0f);
+                float g = ((pixel >> 5)  & 0x3F) * (255.0f / 63.0f);
+                float b = (pixel & 0x1F) * (255.0f / 31.0f);
+
+                float normalized_r = (r / 127.5f) - 1.0f;
+                float normalized_g = (g / 127.5f) - 1.0f;
+                float normalized_b = (b / 127.5f) - 1.0f;
+
+                int input_offset = (x * 224 + y) * 3;
+                input->data.int8[input_offset] = quantize(normalized_r);
+                input->data.int8[input_offset + 1] = quantize(normalized_g);
+                input->data.int8[input_offset + 2] = quantize(normalized_b);
+            }
         }
+
+        esp_camera_fb_return(fb);
 
         if (interpreter->Invoke() != kTfLiteOk) {
             MicroPrintf("Invoke() failed");
         }
         
         float score = dequantize(output->data.int8[0]);
-        if (score >= 0.5) {
-            printf("Human\n");
-        } else {
-            printf("No-Human\n");
-        }
+        printf("Score = %f\n", score);
+        // if (score >= 0.5) {
+        //     printf("Human\n");
+        // } else {
+        //     printf("No-Human\n");
+        // }
     }
 }
