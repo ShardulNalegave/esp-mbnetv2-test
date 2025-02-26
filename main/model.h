@@ -1,5 +1,5 @@
 
 #pragma once
 
-extern const unsigned char esp_mobile_net_model[];
-extern const unsigned int esp_mobile_net_model_len;
+extern const unsigned char human_detect_model[];
+extern const unsigned int human_detect_model_len;

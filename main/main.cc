@@ -8,12 +8,11 @@
 #include <tensorflow/lite/micro/micro_profiler.h>
 #include <tensorflow/lite/micro/micro_mutable_op_resolver.h>
 #include <tensorflow/lite/schema/schema_generated.h>
-#include <tensorflow/lite/micro/micro_profiler.h>
 
 #include "model.h"
 #include "image.h"
 
-static const char* TAG = "esp_mbnetv2_test_app";
+static const char* TAG = "human_detect_app";
 
 namespace {
     const tflite::Model* model = nullptr;
@@ -41,7 +40,7 @@ float dequantize(int8_t val) {
 
 extern "C" void app_main(void)
 {
-    model = tflite::GetModel(esp_mobile_net_model);
+    model = tflite::GetModel(human_detect_model);
     if (model->version() != TFLITE_SCHEMA_VERSION) {
         MicroPrintf("Model provided is schema version %d not equal to supported version %d.", model->version(), TFLITE_SCHEMA_VERSION);
     }
@@ -57,14 +56,15 @@ extern "C" void app_main(void)
 
     ESP_LOGI(TAG, "Allocated memory for Tensor Arena");
 
-    static tflite::MicroMutableOpResolver<7> micro_op_resolver;
+    static tflite::MicroMutableOpResolver<8> micro_op_resolver;
     micro_op_resolver.AddRelu6();
     micro_op_resolver.AddConv2D();
     micro_op_resolver.AddDepthwiseConv2D();
     micro_op_resolver.AddAdd();
     micro_op_resolver.AddMean();
     micro_op_resolver.AddFullyConnected();
-    micro_op_resolver.AddSoftmax();
+    micro_op_resolver.AddLogistic();
+    micro_op_resolver.AddPad();
 
     static tflite::MicroInterpreter static_interpreter(
         model, micro_op_resolver, tensor_arena, kTensorArenaSize, nullptr, &profiler
@@ -81,31 +81,25 @@ extern "C" void app_main(void)
     input = interpreter->input(0);
     output = interpreter->output(0);
 
-    for (int i = 0; i < image_raw_len; i++) {
-        input->data.int8[i] = quantize(((uint8_t)image_raw[i] / 127.5) - 1);
+    for (int i = 0; i < 224 * 224 * 3; i++) {
+        input->data.int8[i] = quantize((image1[i] / 127.5) - 1);
     }
-
-    long long start_time = esp_timer_get_time();
 
     if (interpreter->Invoke() != kTfLiteOk) {
         MicroPrintf("Invoke() failed");
     }
+    
+    float score = dequantize(output->data.int8[0]);
+    printf("Image 1: Score = %f\n", score);
 
-    long long total_time = esp_timer_get_time() - start_time;
-    ESP_LOGI(TAG, "Invoke was successful");
-    printf("Invoke: Total time = %lld\n", total_time / 1000);
-
-    int maxLabel = 0;
-    float maxConf = 0.0;
-
-    for (int i = 0; i < 1000; i++) {
-        float conf = dequantize(output->data.int8[i]);
-        if (conf > maxConf) {
-            maxLabel = i;
-            maxConf = conf;
-        }
+    for (int i = 0; i < 224 * 224 * 3; i++) {
+        input->data.int8[i] = quantize((image2[i] / 127.5) - 1);
     }
 
-    profiler.Log();
-    printf("\nLabel: %d, Confidence: %f\n", maxLabel, maxConf);
+    if (interpreter->Invoke() != kTfLiteOk) {
+        MicroPrintf("Invoke() failed");
+    }
+    
+    score = dequantize(output->data.int8[0]);
+    printf("Image 2: Score = %f\n", score);
 }
